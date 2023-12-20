@@ -33,10 +33,24 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 
 // list / get data
 func productsController(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	result, _ := json.Marshal(products)
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
+	if r.Method == "GET" {
+		w.Header().Set("Content-Type", "application/json")
+		result, _ := json.Marshal(products)
+		w.WriteHeader(http.StatusOK)
+		w.Write(result)
+	} else if r.Method == "POST" {
+		var product product
+		err := json.NewDecoder(r.Body).Decode(&product)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintln(w, "invalid request body")
+			return
+		}
+		products = append(products, product)
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprintln(w, "product created successfully")
+	}
+	http.Error(w, "", http.StatusBadRequest)
 }
 
 // get detail by id
@@ -63,3 +77,5 @@ func productController(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(result)
 }
+
+// create product
