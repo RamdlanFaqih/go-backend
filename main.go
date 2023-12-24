@@ -31,10 +31,10 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello From Go!")
 }
 
-// list / get data
+// list data & post
 func productsController(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "GET" {
-		w.Header().Set("Content-Type", "application/json")
 		result, _ := json.Marshal(products)
 		w.WriteHeader(http.StatusOK)
 		w.Write(result)
@@ -53,13 +53,12 @@ func productsController(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "", http.StatusBadRequest)
 }
 
-// get detail by id
+// get detail by id, update, and delete
 func productController(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	idParams := r.URL.Path[len("/products/"):]
 	id, _ := strconv.Atoi(idParams)
 	// fmt.Fprintln(w, reflect.TypeOf(id))
-
 	var foundIndex = -1
 	for i, p := range products {
 		if p.Id == id {
@@ -67,15 +66,33 @@ func productController(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-
 	if foundIndex == -1 {
 		http.Error(w, "Product not found", http.StatusNotFound)
 		return
 	}
 
-	result, _ := json.Marshal(products[foundIndex])
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
-}
+	if r.Method == "GET" {
+		result, _ := json.Marshal(products[foundIndex])
+		w.WriteHeader(http.StatusOK)
+		w.Write(result)
+	} else if r.Method == "PUT" {
+		var updateProduct product
+		err := json.NewDecoder(r.Body).Decode(&updateProduct)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintln(w, "invalid request body")
+			return
+		}
 
-// create product
+		products[foundIndex] = updateProduct
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprintln(w, "Product updated successfully")
+		return
+	} else if r.Method == "DELETE" {
+		products = append(products[:foundIndex], products[foundIndex+1:]...)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprintln(w, "Product Deleted")
+	}
+	http.Error(w, "", http.StatusBadRequest)
+
+}
